@@ -1,0 +1,235 @@
+---
+import { getEmDashCollection, getSiteSettings } from "emdash";
+import Base from "../layouts/Base.astro";
+import { getReadingTime } from "../utils/reading-time";
+import { resolveBlogSiteIdentity } from "../utils/site-identity";
+
+const POSTS_PER_PAGE = 12;
+
+const [{ entries: posts, cacheHint }, settings] = await Promise.all([
+	getEmDashCollection("posts", {
+		orderBy: { published_at: "desc" },
+		limit: POSTS_PER_PAGE,
+	}),
+	getSiteSettings(),
+]);
+const { siteTitle, siteTagline } = resolveBlogSiteIdentity(settings);
+
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+
+const headline = siteTagline || `Hi, I'm ${siteTitle}.`;
+
+function formatDate(date: Date | null | undefined) {
+	if (!date) return null;
+	return date.toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+	});
+}
+---
+
+<Base title={siteTitle} description={siteTagline}>
+	<div class="home">
+		<header class="hero">
+			<h1>{headline}</h1>
+			<div class="pills">
+				<a class="pill pill-accent" href="/pages/about">About →</a>
+			</div>
+		</header>
+
+		<section class="writing" aria-labelledby="latest-writing">
+			<div class="section-head">
+				<h2 id="latest-writing">Latest writing</h2>
+				{posts.length > 0 && <a href="/posts">View all →</a>}
+			</div>
+			{
+				posts.length === 0 ? (
+					<p class="empty">The first post is on its way.</p>
+				) : (
+					<ul class="post-list">
+						{posts.map((post) => (
+							<li>
+								<a class="post-row" href={`/posts/${post.id}`}>
+									<div class="post-top">
+										<h3 {...post.edit.title}>{post.data.title}</h3>
+										{post.data.publishedAt && (
+											<time datetime={post.data.publishedAt.toISOString()}>
+												{formatDate(post.data.publishedAt)}
+											</time>
+										)}
+									</div>
+									{post.data.excerpt && (
+										<p class="excerpt" {...post.edit.excerpt}>
+											{post.data.excerpt}
+										</p>
+									)}
+									<p class="read-time">
+										{getReadingTime(post.data.content)} min read
+									</p>
+								</a>
+							</li>
+						))}
+					</ul>
+				)
+			}
+		</section>
+	</div>
+</Base>
+
+<style>
+	.home,
+	.home :is(h1, h2, h3, p, a, time) {
+		font-family: var(--font-home), ui-monospace, monospace;
+	}
+
+	.home {
+		max-width: 48rem;
+		margin: 0 auto;
+		padding: 3rem 1.5rem 6rem;
+	}
+
+	.hero h1 {
+		max-width: 18ch;
+		font-size: clamp(1.875rem, 4vw, 2.25rem);
+		font-weight: 600;
+		letter-spacing: -0.025em;
+		line-height: 1.25;
+	}
+
+	.pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+
+	.pill {
+		border-radius: 999px;
+		padding: 0.25rem 0.75rem;
+		font-size: 0.875rem;
+		text-decoration: none;
+	}
+
+	.pill-accent {
+		background: light-dark(#5a6e2c, #a7b878);
+		color: light-dark(#ffffff, #0e0f0c);
+	}
+
+	.pill-accent:hover {
+		background: light-dark(#4e6026, #b7c68a);
+		color: light-dark(#ffffff, #0e0f0c);
+	}
+
+	.writing {
+		margin-top: 4rem;
+	}
+
+	.section-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 0.25rem;
+	}
+
+	.section-head h2 {
+		font-size: 0.75rem;
+		font-weight: 500;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: light-dark(#78716c, #a8a29e);
+	}
+
+	.section-head a {
+		font-size: 0.875rem;
+		color: light-dark(#3b6f99, #8db4da);
+		text-decoration: none;
+	}
+
+	.section-head a:hover {
+		text-decoration: underline;
+	}
+
+	.post-list {
+		list-style: none;
+	}
+
+	.post-row {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		margin: 0 -1rem;
+		padding: 1.25rem 1rem;
+		border-top: 1px solid light-dark(#e7e5e4, #292524);
+		border-radius: 1rem;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.post-list li:first-child .post-row {
+		border-top-color: transparent;
+	}
+
+	.post-row:hover {
+		background: light-dark(#ffffff, #1c1917);
+	}
+
+	.post-top {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.post-top h3 {
+		font-size: 1.125rem;
+		font-weight: 600;
+		letter-spacing: -0.025em;
+		line-height: 1.4;
+	}
+
+	.post-row:hover h3 {
+		color: light-dark(#5a6e2c, #a7b878);
+	}
+
+	.post-top time {
+		flex-shrink: 0;
+		font-size: 0.875rem;
+		color: light-dark(#78716c, #a8a29e);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.excerpt {
+		color: light-dark(#57534e, #a8a29e);
+		line-height: 1.6;
+	}
+
+	.read-time {
+		font-size: 0.75rem;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: light-dark(#a8a29e, #78716c);
+	}
+
+	.empty {
+		margin-top: 1rem;
+		padding: 2rem;
+		border: 1px dashed light-dark(#d6d3d1, #44403c);
+		border-radius: 1rem;
+		text-align: center;
+		color: light-dark(#78716c, #a8a29e);
+	}
+
+	@media (max-width: 640px) {
+		.home {
+			padding-top: 2rem;
+		}
+
+		.post-top {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 0.25rem;
+		}
+	}
+</style>

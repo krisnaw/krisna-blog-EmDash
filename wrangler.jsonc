@@ -1,0 +1,36 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "krisna-blog",
+	"main": "./src/worker.ts",
+	"compatibility_date": "2026-09-29",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"invocation_logs": true,
+			"head_sampling_rate": 1
+		},
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 1
+		}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "krisna-blog"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "krisna-blog-media"
+		}
+	],
+	"triggers": {
+		"crons": ["0 0 * * sun"]
+	},
+	"vars": {
+		"EMDASH_SITE_URL": "https://krisna-blog.krisna-w2010.workers.dev"
+	}
+}

@@ -1,0 +1,374 @@
+---
+import { getEmDashEntry, getSeoMeta, decodeSlug, getSiteSettings } from "emdash";
+import { Image, PortableText } from "emdash/ui";
+import { Comments, CommentForm } from "emdash/ui/comments";
+import Base from "../../layouts/Base.astro";
+import { getReadingTime } from "../../utils/reading-time";
+import { resolveBlogSiteIdentity } from "../../utils/site-identity";
+
+const slug = decodeSlug(Astro.params.slug);
+
+if (!slug) {
+	return Astro.redirect("/404");
+}
+
+const { entry: post, cacheHint } = await getEmDashEntry("posts", slug);
+
+if (!post) {
+	return Astro.redirect("/404");
+}
+
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+
+// Get featured image URL for OG fallback
+// The image may have src (external) or meta.storageKey (local)
+function getImageUrl(img: unknown): string | undefined {
+	if (!img || typeof img !== "object") return undefined;
+	const image = img as Record<string, unknown>;
+	// Check for direct src
+	if (typeof image.src === "string" && image.src) {
+		return image.src.startsWith("http")
+			? image.src
+			: `${Astro.url.origin}${image.src}`;
+	}
+	// Build from storageKey for local images
+	const meta = image.meta as Record<string, unknown> | undefined;
+	const storageKey =
+		(typeof meta?.storageKey === "string" ? meta.storageKey : undefined) ||
+		(typeof image.id === "string" ? image.id : undefined);
+	if (storageKey) {
+		return `${Astro.url.origin}/_emdash/api/media/file/${storageKey}`;
+	}
+	return undefined;
+}
+const featuredImageUrl = getImageUrl(post.data.featured_image);
+const { siteTitle } = resolveBlogSiteIdentity(await getSiteSettings());
+
+// Generate SEO meta from content
+const seo = getSeoMeta(post, {
+	siteTitle,
+	siteUrl: Astro.url.origin,
+	path: Astro.url.pathname.replace(/\/$/, ""),
+	defaultOgImage: featuredImageUrl,
+});
+
+const bylines = post.data.bylines ?? [];
+const readingTime = getReadingTime(post.data.content);
+const tags = post.data.terms?.tag ?? [];
+
+const publishDate =
+	post.data.publishedAt?.toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	}) ?? null;
+---
+
+<Base
+	title={seo.title}
+	pageTitle={seo.ogTitle}
+	description={seo.description}
+	image={seo.ogImage}
+	canonical={seo.canonical}
+	robots={seo.robots}
+	type="article"
+	publishedTime={post.data.publishedAt?.toISOString() ?? null}
+	modifiedTime={post.data.updatedAt.toISOString()}
+	content={{ collection: "posts", id: post.data.id, slug }}
+>
+	<article class="article">
+		{
+			post.data.featured_image && (
+				<div class="article-hero" {...post.edit.featured_image}>
+					<Image image={post.data.featured_image} />
+				</div>
+			)
+		}
+
+		<header class="article-header">
+			<div class="article-meta">
+				{
+					bylines.length > 0 && (
+						<>
+							<span class="article-meta-byline">
+								{bylines.map((credit, i) => (
+									<>
+										{i > 0 && ", "}
+										{credit.byline.displayName}
+									</>
+								))}
+							</span>
+							<span class="meta-dot" />
+						</>
+					)
+				}
+				{
+					publishDate && (
+						<>
+							<time>{publishDate}</time>
+							<span class="meta-dot" />
+						</>
+					)
+				}
+				<span>{readingTime} min read</span>
+			</div>
+			<h1 class="article-title" {...post.edit.title}>
+				{post.data.title}
+			</h1>
+			{
+				post.data.excerpt && (
+					<p class="article-excerpt" {...post.edit.excerpt}>
+						{post.data.excerpt}
+					</p>
+				)
+			}
+			{
+				tags.length > 0 && (
+					<div class="article-tags">
+						{tags.map((tag) => (
+							<a href={`/tag/${tag.slug}`}>{tag.label}</a>
+						))}
+					</div>
+				)
+			}
+		</header>
+
+		<div class="article-content">
+			<PortableText value={post.data.content} />
+		</div>
+
+		<div class="article-comments">
+			<Comments collection="posts" contentId={post.data.id} threaded />
+			<CommentForm collection="posts" contentId={post.data.id} />
+		</div>
+	</article>
+</Base>
+
+<style>
+	.article {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: var(--spacing-16) var(--spacing-6) var(--spacing-20);
+	}
+
+	.article-hero {
+		margin-bottom: var(--spacing-10);
+		border-radius: var(--radius-lg);
+		overflow: hidden;
+		background: var(--color-surface);
+	}
+
+	.article-hero img {
+		width: 100%;
+		height: auto;
+		max-height: 500px;
+		object-fit: cover;
+	}
+
+	.article-header {
+		margin-bottom: var(--spacing-10);
+	}
+
+	.article-meta {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		column-gap: var(--spacing-3);
+		row-gap: var(--spacing-1);
+		font-size: var(--font-size-sm);
+		color: var(--color-muted);
+		margin-bottom: var(--spacing-4);
+	}
+
+	.article-meta-byline {
+		font-weight: 500;
+		color: var(--color-text-secondary);
+	}
+
+	.meta-dot {
+		width: 3px;
+		height: 3px;
+		border-radius: 50%;
+		background: var(--color-muted);
+	}
+
+	.article-title {
+		font-size: clamp(1.75rem, 4vw, 2.5rem);
+		font-weight: 600;
+		line-height: 1.15;
+		letter-spacing: -0.04em;
+		margin-bottom: var(--spacing-4);
+	}
+
+	.article-excerpt {
+		font-size: var(--font-size-xl);
+		line-height: var(--leading-relaxed);
+		color: var(--color-text-secondary);
+	}
+
+	.article-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-2);
+		margin-top: var(--spacing-4);
+	}
+
+	.article-tags a {
+		color: var(--color-muted);
+		font-size: var(--font-size-sm);
+		text-decoration: none;
+	}
+
+	.article-tags a:hover {
+		color: var(--color-text);
+	}
+
+	.article-content {
+		font-size: 1.125rem;
+		line-height: 1.7;
+	}
+
+	.article-content :global(p) {
+		margin-bottom: 1.5em;
+	}
+
+	.article-content :global(h2) {
+		font-size: var(--font-size-2xl);
+		margin-top: 2.5em;
+		margin-bottom: 0.75em;
+		scroll-margin-top: calc(var(--nav-height) + var(--spacing-4));
+	}
+
+	.article-content :global(h3) {
+		font-size: var(--font-size-xl);
+		margin-top: 2em;
+		margin-bottom: 0.5em;
+		scroll-margin-top: calc(var(--nav-height) + var(--spacing-4));
+	}
+
+	.article-content :global(blockquote) {
+		margin: 2em 0;
+		padding: var(--spacing-4) var(--spacing-6);
+		border-left: 3px solid var(--color-border);
+		background: var(--color-bg-subtle);
+		border-radius: 0 var(--radius) var(--radius) 0;
+		color: var(--color-text-secondary);
+	}
+
+	.article-content :global(pre) {
+		margin: 2em 0;
+		padding: var(--spacing-5);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-lg);
+		overflow-x: auto;
+		font-family: var(--font-mono);
+		font-size: var(--font-size-sm);
+		line-height: 1.6;
+	}
+
+	.article-content :global(code) {
+		font-family: var(--font-mono);
+		font-size: 0.9em;
+		background: var(--color-surface);
+		padding: 0.2em 0.4em;
+		border-radius: var(--radius);
+	}
+
+	.article-content :global(pre code) {
+		background: none;
+		padding: 0;
+	}
+
+	.article-content :global(ul),
+	.article-content :global(ol) {
+		margin-bottom: 1.5em;
+		padding-left: 1.5em;
+	}
+
+	.article-content :global(li) {
+		margin-bottom: 0.5em;
+	}
+
+	.article-content :global(img) {
+		margin: 2em 0;
+		border-radius: var(--radius-lg);
+	}
+
+	.article-content :global(hr) {
+		margin: 3em 0;
+		border: none;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.article-content :global(a) {
+		color: var(--color-brand);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+		text-decoration-thickness: 1px;
+	}
+
+	.article-content :global(a:hover) {
+		text-decoration-thickness: 2px;
+	}
+
+	.article-comments {
+		margin-top: var(--spacing-16);
+		padding-top: var(--spacing-10);
+		border-top: 1px solid var(--color-border);
+	}
+
+	.article-comments :global(.ec-comments) {
+		--ec-comment-border: 1px solid var(--color-border);
+	}
+
+	.article-comments :global(.ec-comments-heading) {
+		font-size: var(--font-size-2xl);
+		font-weight: var(--font-weight-heading);
+		margin-bottom: var(--spacing-8);
+	}
+
+	.article-comments :global(.ec-comment-author) {
+		color: var(--color-text);
+	}
+
+	.article-comments :global(.ec-comment-date) {
+		font-family: var(--font-mono);
+		color: var(--color-muted);
+	}
+
+	.article-comments :global(.ec-comment-body) {
+		color: var(--color-text);
+	}
+
+	.article-comments :global(.ec-comment-form-field input),
+	.article-comments :global(.ec-comment-form-field textarea) {
+		background: var(--color-surface) !important;
+		border-color: var(--color-border) !important;
+		color: var(--color-text) !important;
+	}
+
+	.article-comments :global(.ec-comment-user-info) {
+		background: var(--color-surface) !important;
+		border-color: var(--color-border) !important;
+	}
+
+	.article-comments :global(.ec-comment-form-submit) {
+		background: var(--color-brand) !important;
+		color: var(--color-on-brand) !important;
+	}
+
+	@media (max-width: 640px) {
+		.article {
+			padding: var(--spacing-10) var(--spacing-4) var(--spacing-16);
+		}
+
+		.article-title {
+			font-size: var(--font-size-3xl);
+		}
+
+		.article-hero {
+			border-radius: var(--radius);
+		}
+	}
+</style>

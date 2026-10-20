@@ -1,0 +1,62 @@
+/*
+  theme.css -- your theme overrides. This is the file to edit to
+  retheme the site.
+
+  Every design token lives in src/styles/tokens.css (colors, type
+  scale, spacing, layout, shadows) with its default value. Override any
+  of them here: declarations in this file are unlayered, so they always
+  beat the @layer base defaults in tokens.css.
+
+  Colors are defined with light-dark(). Overriding with a plain color
+  changes light and dark mode at once; use light-dark(<light>, <dark>)
+  to set different values per mode.
+
+  Webfonts are loaded in astro.config.mjs (--font-body, --font-mono).
+  Swap the loaded font there; use overrides here for system fonts or a
+  separate heading face.
+
+  Example:
+
+  :root {
+    --color-brand: light-dark(#0f766e, #2dd4bf);
+    --font-heading: "Iowan Old Style", Georgia, serif;
+    --radius: 8px;
+  }
+*/
+
+:root {
+	--color-bg: light-dark(#ffffff, #000000);
+	--color-bg-subtle: light-dark(#fafafa, #0a0a0a);
+	--color-text: light-dark(#171717, #ededed);
+	--color-text-secondary: light-dark(#4d4d4d, #a1a1a1);
+	--color-muted: light-dark(#666666, #888888);
+	--color-border: light-dark(#ebebeb, #2e2e2e);
+	--color-border-subtle: light-dark(#ebebeb, #1f1f1f);
+	--color-surface: light-dark(#fafafa, #111111);
+	--color-brand: light-dark(#171717, #ededed);
+	--color-brand-hover: light-dark(#000000, #ffffff);
+	--color-on-brand: light-dark(#ffffff, #000000);
+	--color-brand-ring: light-dark(
+		color-mix(in srgb, #171717 12%, transparent),
+		color-mix(in srgb, #ededed 16%, transparent)
+	);
+
+	--font-size-base: 1rem;
+	--font-weight-heading: 600;
+	--font-weight-display: 600;
+	--leading-normal: 1.5;
+	--leading-relaxed: 1.6;
+	--tracking-tight: -0.04em;
+	--tracking-snug: -0.02em;
+	--tracking-wide: 0.02em;
+	--tracking-wider: 0.04em;
+
+	--wide-width: 48rem;
+	--content-width: 680px;
+	--radius: 6px;
+	--radius-lg: 8px;
+	--shadow-sm: none;
+	--shadow-lg: 0 8px 24px light-dark(rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.4));
+	--nav-height: 64px;
+}
+
