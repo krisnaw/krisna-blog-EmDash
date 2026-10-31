@@ -30,7 +30,14 @@
 	"triggers": {
 		"crons": ["0 0 * * sun"]
 	},
+	"workers_dev": true,
+	"routes": [
+		{
+			"pattern": "blog.krisnawijaya.com",
+			"custom_domain": true
+		}
+	],
 	"vars": {
-		"EMDASH_SITE_URL": "https://krisna-blog.krisna-w2010.workers.dev"
+		"EMDASH_SITE_URL": "https://blog.krisnawijaya.com"
 	}
 }
